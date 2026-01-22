@@ -1,0 +1,168 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Video Generator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>AI Video Generator</h1>
+      <p>Create realistic AI-generated videos from text prompts — free and unlimited.</p>
+    </header>
+
+    <section class="prompt-section">
+      <label for="prompt-input">Describe your video:</label>
+      <textarea
+        id="prompt-input"
+        placeholder="e.g., A cyberpunk spaceship flying through a nebula, cinematic style, 60 seconds"
+        rows="3"
+      ></textarea>
+      <button id="generate-btn" class="btn-primary">Generate Video</button>
+    </section>
+
+    <section class="preview-section">
+      <div id="loading-indicator" class="hidden">
+        <p>Generating your video... This may take a moment.</p>
+        <div class="spinner"></div>
+      </div>
+
+      <div id="error-message" class="error hidden"></div>
+
+      <div id="video-container" class="hidden">
+        <video id="generated-video" controls></video>
+        <button id="download-btn" class="btn-secondary">Download Video</button>
+      </div>
+    </section>
+
+    <aside class="tips-panel">
+      <h2>Tips for Better Prompts</h2>
+      <ul>
+        <li>Be specific: mention style, mood, duration (e.g., “60 seconds”).</li>
+        <li>Include visual details: lighting, camera angle, color palette.</li>
+        <li>Example: “Aerial view of a futuristic city at sunset, neon lights, drone footage, 45 seconds”.</li>
+      </ul>
+    </aside>
+  </main>
+
+  <script>
+    // DOM elements
+    const promptInput = document.getElementById('prompt-input');
+    const generateBtn = document.getElementById('generate-btn');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const errorMessage = document.getElementById('error-message');
+    const videoContainer = document.getElementById('video-container');
+    const generatedVideo = document.getElementById('generated-video');
+    const downloadBtn = document.getElementById('download-btn');
+
+    // API configuration — replace with your actual service
+    // Example service: Runway ML, Synthesia, Kling, etc.
+    const API_ENDPOINT = 'https://api.example.com/v1/generate-video'; // ← Replace with real endpoint
+    const API_KEY = 'YOUR_API_KEY_HERE'; // ← Replace with your actual API key
+
+    // Show/hide helpers
+    function showElement(el) {
+      el.classList.remove('hidden');
+    }
+
+    function hideElement(el) {
+      el.classList.add('hidden');
+    }
+
+    // Display error message
+    function showError(msg) {
+      errorMessage.textContent = msg;
+      showElement(errorMessage);
+    }
+
+    // Reset UI state
+    function resetUI() {
+      hideElement(loadingIndicator);
+      hideElement(videoContainer);
+      hideElement(errorMessage);
+    }
+
+    // Handle video generation
+    async function generateVideo() {
+      const userPrompt = promptInput.value.trim();
+
+      // Input validation
+      if (!userPrompt) {
+        showError('Please enter a video description.');
+        return;
+      }
+
+      resetUI();
+      showElement(loadingIndicator);
+
+      try {
+        // ⚠️ IMPORTANT: In production, NEVER expose your API key in frontend code.
+        // This is for demo purposes only. Use a backend proxy to protect your key.
+
+        const response = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            prompt: userPrompt,
+            // Optional: extract duration from prompt or set default
+            // duration: 60
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Expected response format example:
+        // { video_url: "https://cdn.example.com/generated/video.mp4" }
+
+        if (!data.video_url) {
+          throw new Error('Invalid response: missing video URL');
+        }
+
+        // Load video
+        generatedVideo.src = data.video_url;
+        generatedVideo.load();
+
+        // Show video player and download button
+        hideElement(loadingIndicator);
+        showElement(videoContainer);
+
+        // Set download link
+        downloadBtn.onclick = () => {
+          const a = document.createElement('a');
+          a.href = data.video_url;
+          a.download = 'ai-generated-video.mp4';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        };
+
+      } catch (err) {
+        console.error('Generation failed:', err);
+        hideElement(loadingIndicator);
+        showError('Failed to generate video. Please try again later.');
+      }
+    }
+
+    // Event listeners
+    generateBtn.addEventListener('click', generateVideo);
+
+    // Allow Enter+Shift for new line, Enter alone to submit
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        generateVideo();
+      }
+    });
+  </script>
+</body>
+</html>
